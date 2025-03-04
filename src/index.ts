@@ -1,3 +1,5 @@
+import { PayU } from "./PayU.js";
+
 export * from "./auth/Authentication.js";
 export * from "./auth/AuthenticationErrorResponse.js";
 export * from "./auth/OAuth.js";
@@ -18,4 +20,7 @@ export * from "./orders/Status.js";
 
 export * from "./endpoints.js";
 export * from "./ips.js";
-export * from "./PayU.js";
+
+export { PayU };
+
+export default PayU;

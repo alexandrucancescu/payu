@@ -12,10 +12,18 @@ const SANDBOX_ENDPOINT = "https://secure.snd.payu.com";
 const PRODUCTION_ENDPOINT = "https://secure.payu.com";
 
 export interface PayUOptions {
+  clientId: number;
+  clientSecret: string;
+  merchantPosId: number;
+  secondKey: string;
   sandbox?: boolean;
 }
 
 export class PayU {
+  private readonly clientId: number;
+  private readonly clientSecret: string;
+  private readonly merchantPosId: number;
+  private readonly secondKey: string;
   private readonly baseEndpoint: string;
   private readonly client: KyInstance;
   private oAuth: OAuth;
@@ -30,17 +38,11 @@ export class PayU {
    * @param {PayUOptions} [options={ sandbox: false }] - additional options
    * @memberof PayU
    */
-  constructor(
-    private readonly clientId: number,
-    private readonly clientSecret: string,
-    private readonly merchantPosId: number,
-    private readonly secondKey: string,
-    private readonly options: PayUOptions = { sandbox: false },
-  ) {
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    this.merchantPosId = merchantPosId;
-    this.secondKey = secondKey;
+  constructor(private readonly options: PayUOptions) {
+    this.clientId = options.clientId;
+    this.clientSecret = options.clientSecret;
+    this.merchantPosId = options.merchantPosId;
+    this.secondKey = options.secondKey;
     this.options = options;
 
     this.baseEndpoint = !this.options.sandbox

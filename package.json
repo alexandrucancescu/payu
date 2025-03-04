@@ -1,6 +1,6 @@
 {
   "name": "@acancescu/payu",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "PayU client for NodeJS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
