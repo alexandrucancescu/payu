@@ -9,4 +9,5 @@ export enum Currency {
   GBP = "GPB",
   CZK = "CZK",
   USD = "USD",
+  RON = "RON",
 }

@@ -3,7 +3,7 @@ import ky, { HTTPError, type KyInstance } from "ky";
 import { OAuth } from "./auth/OAuth.js";
 import { OrderCreateResponse } from "./orders/OrderCreateResponse.js";
 import { Order } from "./orders/Order.js";
-import { OrderEndpoint } from "./endpoints.js";
+import { OrderEndpoint, PaymentMethods } from "./endpoints.js";
 import { PayUError } from "./errors/PayUError.js";
 import { OrderStatusResponse } from "./orders/OrderStatusResponse.js";
 import { SandboxIPs, ProductionIPs } from "./ips.js";
@@ -31,11 +31,7 @@ export class PayU {
 
   /**
    * Creates an instance of PayU.
-   * @param {number} clientId - client id for merchant
-   * @param {string} clientSecret - client secret from panel
-   * @param {number} merchantPosId - pos id from panel
-   * @param {string} secondKey - second key from panel
-   * @param {PayUOptions} [options={ sandbox: false }] - additional options
+   * @param {PayUOptions} [options={ sandbox: false }] - constructor options
    * @memberof PayU
    */
   constructor(private readonly options: PayUOptions) {
@@ -69,6 +65,34 @@ export class PayU {
    */
   public async getAccessToken(): Promise<string> {
     return this.oAuth.getAccessToken();
+  }
+
+  public async getPaymentMethods(): Promise<unknown[]> {
+    const token = await this.oAuth.getAccessToken();
+
+    try {
+      return await this.client
+        .get(PaymentMethods, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .json();
+    } catch (error) {
+      if (error instanceof HTTPError) {
+        const resp = <OrderStatusResponse>(
+          await error.response?.json()
+        );
+        throw new PayUError(
+          resp.status.statusCode,
+          resp.status.code || "",
+          resp.status.codeLiteral,
+          resp.status.statusDesc,
+        );
+      }
+
+      throw error;
+    }
   }
 
   /**

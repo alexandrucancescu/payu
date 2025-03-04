@@ -21,6 +21,9 @@ export * from "./orders/Status.js";
 export * from "./endpoints.js";
 export * from "./ips.js";
 
+export * from "./notifications/PaymentNotification.js";
+export * from "./notifications/PaymentStatus.js";
+
 export { PayU };
 
 export default PayU;

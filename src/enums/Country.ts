@@ -4,5 +4,6 @@
  * @enum {string}
  */
 export enum Country {
-    Poland = 'PL',
+  Poland = "PL",
+  Romania = "RO",
 }
