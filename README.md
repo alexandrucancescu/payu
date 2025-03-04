@@ -1,8 +1,9 @@
 # PayU for NodeJS
 
-![Build](https://github.com/ingameltd/payu/workflows/Build/badge.svg) ![](https://img.shields.io/npm/v/@ingameltd/payu) ![](https://img.shields.io/github/last-commit/ingameltd/payu)
-
 A type safe PayU client for NodeJS written in Typescript
+
+This is a fork of [@ingameltd/payu](https://github.com/ingameltd/payu) using
+ES modules and [ky](https://github.com/sindresorhus/ky) for HTTP requests instead of axios.
 
 ## Installation
 

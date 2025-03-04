@@ -1,13 +1,12 @@
 import crypto from "crypto";
-import Axios, { AxiosError, AxiosInstance } from "axios";
-import { OAuth } from "./auth/OAuth";
-import { OrderCreateResponse } from "./orders/OrderCreateResponse";
-import { Order } from "./orders/Order";
-import { OrderEndpoint } from "./endpoints";
-import { PayUError } from "./errors/PayUError";
-import { OrderStatusResponse } from "./orders/OrderStatusResponse";
-import { SandboxIPs, ProductionIPs } from "./ips";
-import axios from "axios";
+import ky, { HTTPError, type KyInstance } from "ky";
+import { OAuth } from "./auth/OAuth.js";
+import { OrderCreateResponse } from "./orders/OrderCreateResponse.js";
+import { Order } from "./orders/Order.js";
+import { OrderEndpoint } from "./endpoints.js";
+import { PayUError } from "./errors/PayUError.js";
+import { OrderStatusResponse } from "./orders/OrderStatusResponse.js";
+import { SandboxIPs, ProductionIPs } from "./ips.js";
 
 const SANDBOX_ENDPOINT = "https://secure.snd.payu.com";
 const PRODUCTION_ENDPOINT = "https://secure.payu.com";
@@ -17,8 +16,8 @@ export interface PayUOptions {
 }
 
 export class PayU {
-  private baseEndpoint: string;
-  private client: AxiosInstance;
+  private readonly baseEndpoint: string;
+  private readonly client: KyInstance;
   private oAuth: OAuth;
   private ips: string[];
 
@@ -36,7 +35,7 @@ export class PayU {
     private readonly clientSecret: string,
     private readonly merchantPosId: number,
     private readonly secondKey: string,
-    private readonly options: PayUOptions = { sandbox: false }
+    private readonly options: PayUOptions = { sandbox: false },
   ) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
@@ -47,10 +46,16 @@ export class PayU {
     this.baseEndpoint = !this.options.sandbox
       ? PRODUCTION_ENDPOINT
       : SANDBOX_ENDPOINT;
-    this.ips = !this.options.sandbox ? ProductionIPs : SandboxIPs;
-    this.client = Axios.create({ baseURL: this.baseEndpoint });
+    this.ips = !this.options.sandbox
+      ? ProductionIPs
+      : SandboxIPs;
+    this.client = ky.create({ prefixUrl: this.baseEndpoint });
 
-    this.oAuth = new OAuth(this.client, this.clientId, this.clientSecret);
+    this.oAuth = new OAuth(
+      this.client,
+      this.clientId,
+      this.clientSecret,
+    );
   }
 
   /**
@@ -72,7 +77,9 @@ export class PayU {
    * @throws {PayUError}
    * @memberof PayU
    */
-  public async createOrder(order: Order): Promise<OrderCreateResponse> {
+  public async createOrder(
+    order: Order,
+  ): Promise<OrderCreateResponse> {
     const token = await this.oAuth.getAccessToken();
     const data = {
       ...order,
@@ -82,31 +89,24 @@ export class PayU {
       Authorization: `Bearer ${token}`,
     };
 
-    try {
-      const response = await this.client.post(OrderEndpoint, data, {
-        headers: headers,
-        maxRedirects: 0,
-        validateStatus: (status) => {
-          return status === 302;
-        },
-      });
+    const response = await this.client.post(OrderEndpoint, {
+      json: data,
+      headers: headers,
+      redirect: "manual",
+      throwHttpErrors: false,
+    });
 
-      return <OrderCreateResponse>response.data;
-    } catch (error) {
-      const errors = error as Error | AxiosError;
-
-      if (axios.isAxiosError(errors)) {
-        const resp = <OrderStatusResponse>errors?.response?.data;
-        throw new PayUError(
-          resp.status.statusCode,
-          resp.status.code || "",
-          resp.status.codeLiteral,
-          resp.status.statusDesc
-        );
-      }
-
-      throw error;
+    if (![200, 201, 302].includes(response.status)) {
+      const resp = <OrderStatusResponse>await response.json();
+      throw new PayUError(
+        resp.status.statusCode,
+        resp.status.code || "",
+        resp.status.codeLiteral,
+        resp.status.statusDesc,
+      );
     }
+
+    return response.json<OrderCreateResponse>();
   }
 
   /**
@@ -117,7 +117,9 @@ export class PayU {
    * @throws {PayUError}
    * @memberof PayU
    */
-  public async captureOrder(orderId: string): Promise<OrderStatusResponse> {
+  public async captureOrder(
+    orderId: string,
+  ): Promise<OrderStatusResponse> {
     const token = await this.oAuth.getAccessToken();
     const data = {
       orderId: orderId,
@@ -128,25 +130,23 @@ export class PayU {
     };
 
     try {
-      const response = await this.client.put(
-        `${OrderEndpoint}/${orderId}/status`,
-        data,
-        {
+      return this.client
+        .put(`${OrderEndpoint}/${orderId}/status`, {
+          json: data,
           headers: headers,
-        }
-      );
-
-      return <OrderStatusResponse>response.data;
+        })
+        .json<OrderStatusResponse>();
     } catch (error) {
-      const errors = error as Error | AxiosError;
+      if (error instanceof HTTPError) {
+        const resp = <OrderStatusResponse>(
+          await error.response?.json()
+        );
 
-      if (axios.isAxiosError(errors)) {
-        const resp = <OrderStatusResponse>errors?.response?.data;
         throw new PayUError(
           resp.status.statusCode,
           resp.status.code || "",
           resp.status.codeLiteral,
-          resp.status.statusDesc
+          resp.status.statusDesc,
         );
       }
 
@@ -161,27 +161,30 @@ export class PayU {
    * @returns {Promise<OrderStatusResponse>}
    * @memberof PayU
    */
-  public async cancelOrder(orderId: string): Promise<OrderStatusResponse> {
+  public async cancelOrder(
+    orderId: string,
+  ): Promise<OrderStatusResponse> {
     const token = await this.oAuth.getAccessToken();
     const headers = {
       Authorization: `Bearer ${token}`,
     };
 
     try {
-      const response = await this.client.delete(`${OrderEndpoint}/${orderId}`, {
-        headers: headers,
-      });
-
-      return <OrderStatusResponse>response.data;
+      return this.client
+        .delete(`${OrderEndpoint}/${orderId}`, {
+          headers: headers,
+        })
+        .json<OrderStatusResponse>();
     } catch (error) {
-      const errors = error as Error | AxiosError;
-      if (axios.isAxiosError(errors)) {
-        const resp = <OrderStatusResponse>errors?.response?.data;
+      if (error instanceof HTTPError) {
+        const resp = <OrderStatusResponse>(
+          await error.response?.json()
+        );
         throw new PayUError(
           resp.status.statusCode,
           resp.status.code || "",
           resp.status.codeLiteral,
-          resp.status.statusDesc
+          resp.status.statusDesc,
         );
       }
 
@@ -199,7 +202,7 @@ export class PayU {
    */
   public async refundOrder(
     orderId: string,
-    description: string
+    description: string,
   ): Promise<OrderStatusResponse> {
     const token = await this.oAuth.getAccessToken();
     const headers = {
@@ -207,33 +210,30 @@ export class PayU {
     };
 
     try {
-      const response = await this.client.post(
-        `${OrderEndpoint}/${orderId}/refund`,
-        {
-          refund: {
-            description,
+      return this.client
+        .post(`${OrderEndpoint}/${orderId}/refund`, {
+          json: {
+            refund: {
+              description,
+            },
           },
-        },
-        {
           headers: headers,
-        }
-      );
-
-      return <OrderStatusResponse>response.data;
+        })
+        .json<OrderStatusResponse>();
     } catch (error) {
-      const errors = error as Error | AxiosError;
-
-      if (axios.isAxiosError(errors)) {
-        const resp = <OrderStatusResponse>errors?.response?.data;
+      if (error instanceof HTTPError) {
+        const resp = <OrderStatusResponse>(
+          await error.response?.json()
+        );
         throw new PayUError(
           resp.status.statusCode,
           resp.status.code || "",
           resp.status.codeLiteral,
-          resp.status.statusDesc
+          resp.status.statusDesc,
         );
       }
 
-      throw errors;
+      throw error;
     }
   }
 
@@ -245,14 +245,19 @@ export class PayU {
    * @returns {Record<string, string>}
    * @memberof PayU
    */
-  private parseHeaderToJson(data: string): Record<string, string> {
-    return data.split(";").reduce((acc, curr) => {
-      if (curr) {
-        const [key, val] = curr.split("=");
-        acc[key] = val;
-      }
-      return acc;
-    }, {} as Record<string, string>);
+  private parseHeaderToJson(
+    data: string,
+  ): Record<string, string> {
+    return data.split(";").reduce(
+      (acc, curr) => {
+        if (curr) {
+          const [key, val] = curr.split("=");
+          acc[key] = val;
+        }
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
   }
 
   /**
@@ -265,7 +270,7 @@ export class PayU {
    */
   public verifyNotification(
     payuHeader: string,
-    jsonNotification: string
+    jsonNotification: string,
   ): boolean {
     const tokens = this.parseHeaderToJson(payuHeader);
     if (

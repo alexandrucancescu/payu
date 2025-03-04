@@ -1,21 +1,21 @@
-export * from './auth/Authentication';
-export * from './auth/AuthenticationErrorResponse';
-export * from './auth/OAuth';
+export * from "./auth/Authentication.js";
+export * from "./auth/AuthenticationErrorResponse.js";
+export * from "./auth/OAuth.js";
 
-export * from './enums/Country';
-export * from './enums/Currency';
+export * from "./enums/Country.js";
+export * from "./enums/Currency.js";
 
-export * from './errors/AuthenticationError';
-export * from './errors/PayUError';
+export * from "./errors/AuthenticationError.js";
+export * from "./errors/PayUError.js";
 
-export * from './orders/Buyer';
-export * from './orders/Order';
-export * from './orders/OrderCreateResponse';
-export * from './orders/OrderCreateStatus';
-export * from './orders/OrderStatusResponse';
-export * from './orders/Product';
-export * from './orders/Status';
+export * from "./orders/Buyer.js";
+export * from "./orders/Order.js";
+export * from "./orders/OrderCreateResponse.js";
+export * from "./orders/OrderCreateStatus.js";
+export * from "./orders/OrderStatusResponse.js";
+export * from "./orders/Product.js";
+export * from "./orders/Status.js";
 
-export * from './endpoints';
-export * from './ips';
-export * from './PayU';
+export * from "./endpoints.js";
+export * from "./ips.js";
+export * from "./PayU.js";

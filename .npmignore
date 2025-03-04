@@ -3,3 +3,7 @@ src
 tsconfig.json
 .github
 docs
+.idea
+
+prettier.config.js
+pnpm-lock.yaml

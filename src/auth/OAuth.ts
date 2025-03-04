@@ -1,10 +1,9 @@
-import querystring from "querystring";
-import moment from "moment";
-import axios, { AxiosInstance, AxiosError } from "axios";
-import { AuthenticationResponse } from "./Authentication";
-import { AuthorizeEndpoint } from "../endpoints";
-import { AuthenticationErrorResponse } from "./AuthenticationErrorResponse";
-import { AuthenticationError } from "../errors/AuthenticationError";
+import dayjs from "dayjs";
+import { HTTPError, type KyInstance } from "ky";
+import { AuthenticationResponse } from "./Authentication.js";
+import { AuthorizeEndpoint } from "../endpoints.js";
+import { AuthenticationErrorResponse } from "./AuthenticationErrorResponse.js";
+import { AuthenticationError } from "../errors/AuthenticationError.js";
 
 export class OAuth {
   private accessToken: string;
@@ -12,53 +11,52 @@ export class OAuth {
 
   /**
    *Creates an instance of OAuth.
-   * @param {AxiosInstance} client - configured axios client for proper backend
+   * @param {KyInstance} client - configured axios client for proper backend
    * @param {number} clientId - client id
    * @param {string} clientSecret - client secret
    * @memberof OAuth
    */
   constructor(
-    private readonly client: AxiosInstance,
+    private readonly client: KyInstance,
+
     private readonly clientId: number,
-    private readonly clientSecret: string
+    private readonly clientSecret: string,
   ) {
     // initialize the authenticater to have invalidated expiry date
     // so it will fetch new one on first try
-    this.expiry = moment().subtract(1, "minute").toDate();
+    this.expiry = dayjs().subtract(1, "minute").toDate();
     this.accessToken = "";
   }
 
   private async _fetchAccessToken(): Promise<AuthenticationResponse> {
     const data = {
       grant_type: "client_credentials",
-      client_id: this.clientId,
+      client_id: this.clientId.toString(),
       client_secret: this.clientSecret,
     };
 
-    const config = {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    };
     try {
-      const response = await this.client.post(
-        AuthorizeEndpoint,
-        querystring.stringify(data),
-        config
-      );
-      const auth = <AuthenticationResponse>response.data;
-      return auth;
+      return await this.client
+        .post(AuthorizeEndpoint, {
+          body: new URLSearchParams(data),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        })
+        .json<AuthenticationResponse>();
     } catch (error) {
       this.accessToken = "";
-      this.expiry = moment().subtract(1, "minute").toDate();
+      this.expiry = dayjs().subtract(1, "minute").toDate();
 
-      const errors = error as Error | AxiosError;
+      const errors = error as Error | HTTPError;
 
-      if (axios.isAxiosError(errors)) {
-        const errResponse = <AuthenticationErrorResponse>errors?.response?.data;
+      if (errors instanceof HTTPError) {
+        const errResponse = <AuthenticationErrorResponse>(
+          await errors.response?.json()
+        );
         throw new AuthenticationError(
           errResponse.error,
-          errResponse.error_description
+          errResponse.error_description,
         );
       }
 
@@ -71,17 +69,22 @@ export class OAuth {
    *
    * @returns {Promise<string>} - access token
    * @throws {AuthenticationError}
-   * @memberof Auth
+   * @memberof OAuth
    */
   public async getAccessToken(): Promise<string> {
     // valid token(valid for 99%)
-    if (moment().isBefore(this.expiry, "seconds") && this.accessToken !== "") {
+    if (
+      dayjs().isBefore(this.expiry, "seconds") &&
+      this.accessToken !== ""
+    ) {
       return this.accessToken;
     }
 
     const token = await this._fetchAccessToken();
     this.accessToken = token.access_token;
-    this.expiry = moment().add(token.expires_in, "seconds").toDate();
+    this.expiry = dayjs()
+      .add(token.expires_in, "seconds")
+      .toDate();
 
     return this.accessToken;
   }

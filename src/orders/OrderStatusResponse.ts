@@ -1,7 +1,7 @@
-import { Status } from "./Status";
+import { Status } from "./Status.js";
 
 export interface OrderStatusResponse {
-    status: Status;
-    orderId?: string;
-    extOrderId?: string;
+  status: Status;
+  orderId?: string;
+  extOrderId?: string;
 }

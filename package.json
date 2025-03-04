@@ -1,23 +1,19 @@
 {
-  "name": "@ingameltd/payu",
-  "version": "1.0.6",
+  "name": "@acancescu/payu",
+  "version": "1.1.0",
   "description": "PayU client for NodeJS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "scripts": {
-    "prepublish": "npm run build",
+    "prepublish": "tsc",
     "build": "tsc",
     "build:check": "tsc --noEmit",
-    "watch": "tsc --watch",
-    "test": "echo 'no tests yet'",
-    "docs": "npx typedoc --out docs src"
-  },
-  "publishConfig": {
-    "access": "public"
+    "watch": "tsc --watch"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ingameltd/payu.git"
+    "url": "git+https://github.com/alexandrucancescu/payu.git"
   },
   "keywords": [
     "payu",
@@ -27,16 +23,16 @@
   "author": "Kasun Vithanage",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ingameltd/payu/issues"
+    "url": "https://github.com/alexandrucancescu/payu/issues"
   },
-  "homepage": "https://github.com/ingameltd/payu#readme",
+  "homepage": "https://github.com/alexandrucancescu/payu#readme",
   "devDependencies": {
-    "@types/node": "^17.0.24",
-    "typedoc": "^0.22.15",
+    "@types/node": "^22.13.9",
+    "prettier": "^3.5.3",
     "typescript": "^4.6.3"
   },
   "dependencies": {
-    "axios": "^0.21.4",
-    "moment": "^2.29.2"
+    "dayjs": "^1.11.13",
+    "ky": "^1.7.5"
   }
 }
